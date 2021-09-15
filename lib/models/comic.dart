@@ -91,6 +91,7 @@ class Comic {
   final int pageCount;
   final Thumbnail thumbnail;
   final List<TextObject> textObjects;
+  final List<Urls> urls;
 
   Comic(
       {required this.id,
@@ -98,7 +99,8 @@ class Comic {
       required this.description,
       required this.pageCount,
       required this.thumbnail,
-      required this.textObjects});
+      required this.textObjects,
+      required this.urls});
 
   Comic copyWith(
       {int? id,
@@ -106,14 +108,16 @@ class Comic {
       String? description,
       int? pageCount,
       Thumbnail? thumbnail,
-      List<TextObject>? textObjects}) {
+      List<TextObject>? textObjects,
+      List<Urls>? urls}) {
     return Comic(
         id: id ?? this.id,
         title: title ?? this.title,
         description: description ?? this.description,
         pageCount: pageCount ?? this.pageCount,
         thumbnail: thumbnail ?? this.thumbnail,
-        textObjects: textObjects ?? this.textObjects);
+        textObjects: textObjects ?? this.textObjects,
+        urls: urls ?? this.urls);
   }
 
   factory Comic.fromJson(Map<String, dynamic> map) {
@@ -125,6 +129,9 @@ class Comic {
         thumbnail: Thumbnail.fromJson(map['thumbnail']),
         textObjects: List.from(map['textObjects'])
             .map((e) => TextObject.fromJson(e))
+            .toList(),
+        urls: List.from(map['urls'])
+            .map((e) => Urls.fromJson(e))
             .toList()); //TextObject.fromJson(map['textObjects']));
   }
 

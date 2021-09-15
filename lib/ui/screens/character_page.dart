@@ -5,7 +5,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart';
-import 'package:marvel_app/cubits/cubit/search_cubit.dart';
+
+import 'package:marvel_app/cubits/search/search_cubit.dart';
 import 'package:marvel_app/models/character.dart';
 import 'package:marvel_app/ui/screens/character_details.dart';
 import 'package:marvel_app/ui/widgets/mycard.dart';
@@ -13,37 +14,44 @@ import 'package:marvel_app/ui/widgets/mycard.dart';
 import '../../constants.dart';
 import '../../data/marvel_repository.dart';
 
-class HomePage extends StatefulWidget {
-  HomePage({Key? key}) : super(key: key);
+class CharacterPage extends StatefulWidget {
+  final VoidCallback openDrawer;
+  final bool shouldRefresh;
+  CharacterPage({
+    Key? key,
+    required this.openDrawer,
+    required this.shouldRefresh,
+  }) : super(key: key);
 
   @override
-  _HomePageState createState() => _HomePageState();
+  _CharacterPageState createState() => _CharacterPageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _CharacterPageState extends State<CharacterPage> {
   List<Character> characters = MarvelRepository.characters;
   void fetch({int? offest}) async {
-    int val = 80;
+    int val = Random().nextInt(1500);
     if (offest != null) {
       val = offest;
     }
-    BlocProvider.of<SearchCubit>(context).emitRefreshing();
+    BlocProvider.of<CharacterPageStateCubit>(context).emitRefreshing();
     await MarvelRepository.getAllCharacter(offest: val);
     characters = MarvelRepository.characters;
-    BlocProvider.of<SearchCubit>(context).emitNotSearching();
+    BlocProvider.of<CharacterPageStateCubit>(context).emitNotSearching();
   }
 
   void searchCharacter({required String name}) async {
-    BlocProvider.of<SearchCubit>(context).emitSearching();
+    BlocProvider.of<CharacterPageStateCubit>(context).emitSearching();
     await MarvelRepository.searchCharacter(name: name);
     print("search complete");
     characters = MarvelRepository.searchCharacters;
-    BlocProvider.of<SearchCubit>(context).emitDoneSearching();
+    BlocProvider.of<CharacterPageStateCubit>(context).emitDoneSearching();
   }
 
   @override
   void initState() {
-    fetch();
+    if (widget.shouldRefresh) fetch();
+
     super.initState();
   }
 
@@ -51,11 +59,18 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     TextEditingController _searchController = TextEditingController();
     return Scaffold(
+      backgroundColor: Colors.grey[700],
       appBar: AppBar(
-        title: BlocBuilder<SearchCubit, SearchState>(builder: (context, state) {
+        leading: IconButton(
+            onPressed: () {
+              widget.openDrawer();
+            },
+            icon: Icon(Icons.menu)),
+        title: BlocBuilder<CharacterPageStateCubit, SearchState>(
+            builder: (context, state) {
           return AnimatedSwitcher(
-            duration: Duration(milliseconds: 500),
-            reverseDuration: Duration(microseconds: 200),
+            duration: Duration(milliseconds: 200),
+            reverseDuration: Duration(milliseconds: 200),
             transitionBuilder: (child, animation) {
               var animationOffset = animation
                   .drive(Tween<Offset>(begin: Offset(1, 0), end: Offset(0, 0)));
@@ -66,7 +81,7 @@ class _HomePageState extends State<HomePage> {
               );
             },
             child: state is NotSearching || state is Refreshing
-                ? Text("Marvel App")
+                ? Text("Characters")
                 : Row(
                     children: [
                       Expanded(
@@ -85,49 +100,28 @@ class _HomePageState extends State<HomePage> {
           );
         }),
         actions: [
-          BlocBuilder<SearchCubit, SearchState>(builder: (context, state) {
+          BlocBuilder<CharacterPageStateCubit, SearchState>(
+              builder: (context, state) {
             if (!(state is NotSearching || state is Refreshing)) {
               return IconButton(
                   onPressed: () {
                     characters = MarvelRepository.characters;
-                    BlocProvider.of<SearchCubit>(context).emitNotSearching();
+                    BlocProvider.of<CharacterPageStateCubit>(context)
+                        .emitNotSearching();
                   },
                   icon: Icon(Icons.close));
             } else {
               return IconButton(
                   onPressed: () {
-                    BlocProvider.of<SearchCubit>(context).emitTyping();
+                    BlocProvider.of<CharacterPageStateCubit>(context)
+                        .emitTyping();
                   },
                   icon: Icon(Icons.search));
             }
           })
         ],
       ),
-      drawer: Drawer(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            DrawerHeader(
-              child: Container(
-                height: 50,
-                child: Image.asset("assets/marvel_logo.png"),
-              ),
-            ),
-            ListTile(
-                title: Text("Characters"),
-                leading: Icon(
-                  Icons.account_circle_rounded,
-                )),
-            ListTile(
-              title: Text("Comics"),
-              leading: Icon(
-                Icons.menu_book,
-              ),
-            ),
-          ],
-        ),
-      ),
-      body: BlocBuilder<SearchCubit, SearchState>(
+      body: BlocBuilder<CharacterPageStateCubit, SearchState>(
         builder: (context, state) {
           if (state is Searching || state is Refreshing) {
             return Center(
@@ -140,7 +134,8 @@ class _HomePageState extends State<HomePage> {
               await MarvelRepository.getAllCharacter(
                   offest: Random().nextInt(1500));
               characters = MarvelRepository.characters;
-              BlocProvider.of<SearchCubit>(context).emitNotSearching();
+              BlocProvider.of<CharacterPageStateCubit>(context)
+                  .emitNotSearching();
             },
             child: GridView.builder(
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
